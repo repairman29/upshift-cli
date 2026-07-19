@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for public pricing. Update here first, then sync web/, docs/, src/, upshiftai/, skills/, and Stripe products.",
+  "_comment": "Single source of truth for public pricing. Update here first, then sync the site, docs, and Stripe products.",
   "currency": "USD",
   "model": "unlimited-subscription",
   "_modelNote": "Subscriptions are unlimited AI usage per tier. Credits are taste-test only (free tier) and optional add-ons for power users beyond plan.",
@@ -10,12 +10,21 @@
   },
   "creditPacks": {
     "_note": "Add-on packs for free-tier users who want more without subscribing. Subscribers get unlimited AI; packs are for free users only.",
-    "small": { "credits": 100, "priceUsd": 5 },
-    "medium": { "credits": 300, "priceUsd": 12 },
-    "large": { "credits": 1000, "priceUsd": 35 }
+    "small": {
+      "credits": 100,
+      "priceUsd": 5
+    },
+    "medium": {
+      "credits": 300,
+      "priceUsd": 12
+    },
+    "large": {
+      "credits": 1000,
+      "priceUsd": 35
+    }
   },
   "hostedCloud": {
-    "summary": "UpshiftAI dashboard (api.upshiftai.dev), JARVIS, and remote credit checks align with these tiers. Pro and Team subscribers have unlimited AI features; no credit counting."
+    "summary": "The hosted dashboard and remote credit checks align with these tiers. Pro and Team subscribers have unlimited AI features; no credit counting."
   },
   "tiers": {
     "free": {
@@ -23,7 +32,10 @@
       "priceMonthlyUsd": 0,
       "includedCreditsMonthly": 0,
       "_includedCreditsNote": "10 one-time starter credits (defaultFreeCredits) to taste AI features. No monthly replenishment on free tier.",
-      "limits": { "repos": 1, "seats": 1 },
+      "limits": {
+        "repos": 1,
+        "seats": 1
+      },
       "features": [
         "scan",
         "explain-basic",
@@ -39,7 +51,10 @@
       "priceMonthlyUsd": 12,
       "aiUsage": "unlimited",
       "stripePriceIdEnv": "STRIPE_PRICE_PRO",
-      "limits": { "repos": "unlimited", "seats": 1 },
+      "limits": {
+        "repos": "unlimited",
+        "seats": 1
+      },
       "features": [
         "scan",
         "explain",
@@ -58,7 +73,10 @@
       "priceMonthlyUsd": 39,
       "aiUsage": "unlimited",
       "stripePriceIdEnv": "STRIPE_PRICE_TEAM",
-      "limits": { "repos": "unlimited", "seats": 10 },
+      "limits": {
+        "repos": "unlimited",
+        "seats": 10
+      },
       "features": [
         "everything-in-pro",
         "up-to-10-seats",
