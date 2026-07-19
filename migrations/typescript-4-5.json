@@ -1,0 +1,25 @@
+{
+  "name": "typescript-4-to-5",
+  "description": "TypeScript 4 → 5: package bump; check breaking changes (Promise.resolve, emit, exports)",
+  "from": "4.x",
+  "to": "5.x",
+  "package": "typescript",
+  "steps": [
+    {
+      "id": "typescript",
+      "description": "Upgrade typescript to 5.x",
+      "package": "typescript",
+      "version": "^5.0.0"
+    },
+    {
+      "id": "tslib",
+      "description": "Upgrade tslib if present (often used with TypeScript)",
+      "package": "tslib",
+      "version": "^2.6.0"
+    }
+  ],
+  "links": [
+    "https://github.com/microsoft/TypeScript/wiki/Breaking-Changes",
+    "https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "vue-2-to-3",
+  "description": "Vue 2 → 3: createApp, Composition API, breaking API changes",
+  "from": "2.x",
+  "to": "3.x",
+  "package": "vue",
+  "steps": [
+    {
+      "id": "createApp",
+      "description": "Replace new Vue() with createApp()",
+      "find": "new Vue(",
+      "replace": "createApp(",
+      "note": "Import createApp from 'vue'. Mount with .mount('#app')."
+    },
+    {
+      "id": "import-createApp",
+      "description": "Add createApp import if not present",
+      "find": "import Vue from 'vue'",
+      "replace": "import { createApp } from 'vue'",
+      "note": "Use named import for createApp."
+    },
+    {
+      "id": "vue-version",
+      "description": "Upgrade vue to 3.x",
+      "package": "vue",
+      "version": "^3.4.0"
+    },
+    {
+      "id": "vue-router",
+      "description": "Upgrade vue-router to 4.x for Vue 3",
+      "package": "vue-router",
+      "version": "^4.0.0"
+    }
+  ],
+  "links": [
+    "https://v3-migration.vuejs.org/",
+    "https://vuejs.org/guide/migration/introduction.html"
+  ]
+}

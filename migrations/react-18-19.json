@@ -1,0 +1,55 @@
+{
+  "name": "react-18-to-19",
+  "description": "React 18 → 19: createRoot API, hydrateRoot, and type changes",
+  "from": "18.x",
+  "to": "19.x",
+  "package": "react",
+  "steps": [
+    {
+      "id": "createRoot",
+      "description": "Replace ReactDOM.render with createRoot (react-dom/client)",
+      "find": "ReactDOM.render(",
+      "replace": "ReactDOM.createRoot(document.getElementById('root')).render(",
+      "astTransform": {
+        "type": "replace-member-call",
+        "description": "Replace ReactDOM.render(element, container) with createRoot(container).render(element)",
+        "objectName": "ReactDOM",
+        "propertyName": "render",
+        "newExpression": "createRoot({arg1}).render({arg0})",
+        "addImport": {
+          "name": "createRoot",
+          "from": "react-dom/client"
+        }
+      },
+      "note": "The new API requires createRoot from 'react-dom/client'. Arguments are reordered."
+    },
+    {
+      "id": "hydrateRoot",
+      "description": "Replace ReactDOM.hydrate with hydrateRoot (react-dom/client)",
+      "find": "ReactDOM.hydrate(",
+      "replace": "ReactDOM.hydrateRoot(document.getElementById('root'), ",
+      "astTransform": {
+        "type": "replace-member-call",
+        "description": "Replace ReactDOM.hydrate(element, container) with hydrateRoot(container, element)",
+        "objectName": "ReactDOM",
+        "propertyName": "hydrate",
+        "newExpression": "hydrateRoot({arg1}, {arg0})",
+        "addImport": {
+          "name": "hydrateRoot",
+          "from": "react-dom/client"
+        }
+      },
+      "note": "hydrateRoot is now imported from 'react-dom/client'. Arguments are reordered."
+    },
+    {
+      "id": "react-dom",
+      "description": "Upgrade react-dom to match React 19",
+      "package": "react-dom",
+      "version": "^19.0.0"
+    }
+  ],
+  "links": [
+    "https://react.dev/blog/2024/04/25/react-19-upgrade-guide",
+    "https://react.dev/blog/2024/12/05/react-19"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "next-13-to-14",
+  "description": "Next.js 13 → 14: App Router stable, metadata API, Turbopack opt-in",
+  "from": "13.x",
+  "to": "14.x",
+  "package": "next",
+  "steps": [
+    {
+      "id": "metadata-export",
+      "description": "Ensure metadata is exported from layout/page when using generateMetadata",
+      "find": "export async function generateMetadata",
+      "replace": "export async function generateMetadata",
+      "note": "No code change; ensure layout.tsx/page.tsx export metadata correctly. See Next.js 14 metadata docs."
+    },
+    {
+      "id": "next-version",
+      "description": "Upgrade next to 14.x",
+      "package": "next",
+      "version": "^14.0.0"
+    },
+    {
+      "id": "react-dom",
+      "description": "Upgrade react-dom to match React 18",
+      "package": "react-dom",
+      "version": "^18.2.0"
+    }
+  ],
+  "links": [
+    "https://nextjs.org/docs/app/building-your-application/upgrading",
+    "https://nextjs.org/blog/next-14"
+  ]
+}

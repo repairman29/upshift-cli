@@ -1,0 +1,25 @@
+{
+  "name": "vite-4-5",
+  "description": "Vite 4 → 5: Node 18+, ESM config, Rollup 4",
+  "from": "4.x",
+  "to": "5.x",
+  "package": "vite",
+  "steps": [
+    {
+      "id": "vite-core",
+      "description": "Upgrade vite to 5.x",
+      "package": "vite",
+      "version": "^5.0.0"
+    },
+    {
+      "id": "plugin-react",
+      "description": "Upgrade @vitejs/plugin-react if used",
+      "package": "@vitejs/plugin-react",
+      "version": "^4.3.0"
+    }
+  ],
+  "links": [
+    "https://v5.vite.dev/guide/migration",
+    "https://vite.dev/blog/announcing-vite5"
+  ]
+}

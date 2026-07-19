@@ -1,0 +1,25 @@
+{
+  "name": "jest-28-to-29",
+  "description": "Jest 28 → 29: snapshot format, jsdom 20, jest.mocked() API",
+  "from": "28.x",
+  "to": "29.x",
+  "package": "jest",
+  "steps": [
+    {
+      "id": "jest",
+      "description": "Upgrade jest to 29.x",
+      "package": "jest",
+      "version": "^29.0.0"
+    },
+    {
+      "id": "jest-jsdom",
+      "description": "Upgrade jest-environment-jsdom if present",
+      "package": "jest-environment-jsdom",
+      "version": "^29.0.0"
+    }
+  ],
+  "links": [
+    "https://jestjs.io/docs/upgrading-to-jest29",
+    "https://jestjs.io/docs/29.7/upgrading-to-jest29"
+  ]
+}

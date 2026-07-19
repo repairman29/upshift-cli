@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "description": "Pinned public repos for read-only corpus smoke (shallow clone + upshift scan). Use tags or full SHAs in ref.",
+  "defaults": {
+    "timeoutMs": 180000
+  },
+  "repos": [
+    {
+      "name": "chalk",
+      "url": "https://github.com/chalk/chalk.git",
+      "ref": "v5.3.0",
+      "commands": [["scan"], ["scan", "--json"], ["explain", "chalk", "--risk"]]
+    },
+    {
+      "name": "strip-json-comments",
+      "url": "https://github.com/sindresorhus/strip-json-comments.git",
+      "ref": "v5.0.0",
+      "commands": [["scan"], ["scan", "--json"]]
+    }
+  ]
+}

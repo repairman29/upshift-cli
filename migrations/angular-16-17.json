@@ -1,0 +1,26 @@
+{
+  "name": "angular-16-to-17",
+  "description": "Angular 16 → 17: ng update, control flow (@if/@for), standalone defaults",
+  "from": "16.x",
+  "to": "17.x",
+  "package": "@angular/core",
+  "steps": [
+    {
+      "id": "angular-core",
+      "description": "Upgrade @angular/core to 17.x",
+      "package": "@angular/core",
+      "version": "^17.0.0"
+    },
+    {
+      "id": "angular-cli",
+      "description": "Upgrade @angular/cli to 17.x",
+      "package": "@angular/cli",
+      "version": "^17.0.0"
+    }
+  ],
+  "note": "After upgrading packages, run: ng update @angular/core@17 @angular/cli@17. See Update Guide for control flow (@if/@for) and standalone migration.",
+  "links": [
+    "https://angular.dev/update-guide",
+    "https://v17.angular.io/guide/control-flow"
+  ]
+}

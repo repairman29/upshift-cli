@@ -1,0 +1,261 @@
+name: "Upshift Dependency Scan"
+description: "Scan dependencies for outdated packages, vulnerabilities, and get an A–F health score"
+author: "Upshift AI"
+branding:
+  icon: "arrow-up-circle"
+  color: "green"
+
+inputs:
+  upshift-token:
+    description: "Upshift API token (required for AI features and credits)"
+    required: false
+    default: ""
+  github-token:
+    description: "GitHub token for posting PR comments"
+    required: false
+    default: ${{ github.token }}
+  working-directory:
+    description: "Project directory to scan"
+    required: false
+    default: "."
+  health-score:
+    description: "Run upshift radar --score to compute A–F health grade"
+    required: false
+    default: "true"
+  fail-on:
+    description: "Fail on: none | vulnerabilities | high | critical"
+    required: false
+    default: "critical"
+  comment-on-pr:
+    description: "Post scan results as a PR comment"
+    required: false
+    default: "true"
+  upload-artifact:
+    description: "Upload JSON scan report as a GitHub Actions artifact"
+    required: false
+    default: "false"
+  artifact-name:
+    description: "Artifact name when upload-artifact is true"
+    required: false
+    default: "upshift-scan-report"
+
+outputs:
+  outdated-count:
+    description: "Number of outdated dependencies"
+    value: ${{ steps.scan.outputs.outdated-count }}
+  vulnerability-count:
+    description: "Number of vulnerabilities"
+    value: ${{ steps.scan.outputs.vulnerability-count }}
+  critical-count:
+    description: "Number of critical vulnerabilities"
+    value: ${{ steps.scan.outputs.critical-count }}
+  health-score:
+    description: "Numeric health score (0–100)"
+    value: ${{ steps.radar.outputs.health-score }}
+  health-grade:
+    description: "Letter health grade (A–F)"
+    value: ${{ steps.radar.outputs.health-grade }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+        cache: "npm"
+
+    - name: Install Upshift CLI
+      shell: bash
+      run: npm install -g upshift-cli
+
+    - name: Run dependency scan
+      id: scan
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        UPSHIFT_API_TOKEN: ${{ inputs.upshift-token }}
+      run: |
+        set +e
+        upshift scan --json > /tmp/upshift-scan.json 2>&1
+        set -e
+
+        OUTDATED=$(jq '.outdated | length // 0' /tmp/upshift-scan.json 2>/dev/null || echo "0")
+        VULNS=$(jq '.vulnerabilities.items | length // 0' /tmp/upshift-scan.json 2>/dev/null || echo "0")
+        CRITICAL=$(jq '.vulnerabilities.counts.critical // 0' /tmp/upshift-scan.json 2>/dev/null || echo "0")
+        HIGH=$(jq '.vulnerabilities.counts.high // 0' /tmp/upshift-scan.json 2>/dev/null || echo "0")
+
+        echo "outdated-count=$OUTDATED" >> $GITHUB_OUTPUT
+        echo "vulnerability-count=$VULNS" >> $GITHUB_OUTPUT
+        echo "critical-count=$CRITICAL" >> $GITHUB_OUTPUT
+        echo "high-count=$HIGH" >> $GITHUB_OUTPUT
+
+        echo "Outdated: $OUTDATED  Vulnerabilities: $VULNS  Critical: $CRITICAL"
+
+    - name: Compute health score
+      id: radar
+      if: ${{ inputs.health-score == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        UPSHIFT_API_TOKEN: ${{ inputs.upshift-token }}
+      run: |
+        set +e
+        RADAR_OUT=$(upshift radar --score --json 2>/dev/null)
+        set -e
+
+        SCORE=$(echo "$RADAR_OUT" | jq -r '.score // ""' 2>/dev/null || echo "")
+        GRADE=$(echo "$RADAR_OUT" | jq -r '.grade // ""' 2>/dev/null || echo "")
+
+        echo "health-score=${SCORE}" >> $GITHUB_OUTPUT
+        echo "health-grade=${GRADE}" >> $GITHUB_OUTPUT
+
+        echo "Health: ${SCORE}/100 (${GRADE})"
+
+    - name: Write job summary
+      shell: bash
+      run: |
+        OUTDATED="${{ steps.scan.outputs.outdated-count }}"
+        VULNS="${{ steps.scan.outputs.vulnerability-count }}"
+        CRITICAL="${{ steps.scan.outputs.critical-count }}"
+        HIGH="${{ steps.scan.outputs.high-count }}"
+        SCORE="${{ steps.radar.outputs.health-score }}"
+        GRADE="${{ steps.radar.outputs.health-grade }}"
+
+        {
+          echo "## 📦 Upshift Dependency Report"
+          echo ""
+          if [ -n "$GRADE" ]; then
+            echo "**Health grade: ${GRADE}** (${SCORE}/100)"
+            echo ""
+          fi
+          echo "| Metric | Count |"
+          echo "|--------|-------|"
+          echo "| Outdated packages | ${OUTDATED} |"
+          echo "| Vulnerabilities | ${VULNS} |"
+          echo "| Critical | ${CRITICAL} |"
+          echo "| High | ${HIGH} |"
+          echo ""
+          if [ "${CRITICAL}" -gt 0 ] || [ "${HIGH}" -gt 0 ]; then
+            echo "⚠️ **Security vulnerabilities require attention.** Run \`upshift audit --ai\` for AI-powered remediation."
+            echo ""
+          elif [ "${OUTDATED}" -gt 0 ]; then
+            echo "📦 Dependencies are outdated. Run \`upshift upgrade\` for safe single-package upgrades."
+            echo ""
+          else
+            echo "✅ All dependencies are current with no known vulnerabilities."
+            echo ""
+          fi
+          echo "---"
+          echo "*Scanned by [Upshift](https://upshiftai.dev) · [Docs](https://upshiftai.dev/docs/github-action)*"
+        } >> $GITHUB_STEP_SUMMARY
+
+    - name: Comment on PR
+      if: ${{ inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const outdated = parseInt('${{ steps.scan.outputs.outdated-count }}') || 0;
+          const vulns = parseInt('${{ steps.scan.outputs.vulnerability-count }}') || 0;
+          const critical = parseInt('${{ steps.scan.outputs.critical-count }}') || 0;
+          const score = '${{ steps.radar.outputs.health-score }}';
+          const grade = '${{ steps.radar.outputs.health-grade }}';
+
+          const gradeEmoji = { A: '🟢', B: '🟡', C: '🟡', D: '🔴', F: '🔴' };
+
+          let body = `## 📦 Upshift Dependency Scan\n\n`;
+
+          if (grade) {
+            const emoji = gradeEmoji[grade] || '⚪';
+            body += `**Health grade: ${emoji} ${grade}** (${score}/100)\n\n`;
+          }
+
+          body += `| Metric | Count |\n`;
+          body += `|--------|-------|\n`;
+          body += `| Outdated | ${outdated} |\n`;
+          body += `| Vulnerabilities | ${vulns} |\n`;
+          body += `| Critical | ${critical} |\n\n`;
+
+          if (critical > 0) {
+            body += `⚠️ **${critical} critical vulnerabilit${critical === 1 ? 'y' : 'ies'} detected.** Run \`upshift audit --ai\` for remediation.\n\n`;
+          } else if (vulns > 0) {
+            body += `⚠️ Vulnerabilities found. Run \`upshift explain <pkg>\` for details.\n\n`;
+          } else if (outdated > 0) {
+            body += `📦 Some dependencies are outdated. Run \`upshift upgrade <pkg>\` for safe upgrades.\n\n`;
+          } else {
+            body += `✅ All dependencies are up to date with no known vulnerabilities.\n\n`;
+          }
+
+          const hasToken = Boolean('${{ inputs.upshift-token }}');
+          if (!hasToken && (outdated > 0 || vulns > 0)) {
+            body += `---\n`;
+            body += `💡 **Get AI explanations and automatic code fixes** — [Upshift Pro](https://upshiftai.dev/pricing) ($12/mo)\n\n`;
+          }
+
+          body += `*[Upshift](https://upshiftai.dev) · [Docs](https://upshiftai.dev/docs/github-action)*`;
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.find(c => c.body && c.body.includes('Upshift Dependency Scan'));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+    - name: Upload scan report
+      if: ${{ inputs.upload-artifact == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: /tmp/upshift-scan.json
+        retention-days: 30
+
+    - name: Enforce failure threshold
+      shell: bash
+      run: |
+        CRITICAL="${{ steps.scan.outputs.critical-count }}"
+        HIGH="${{ steps.scan.outputs.high-count }}"
+        VULNS="${{ steps.scan.outputs.vulnerability-count }}"
+        FAIL_ON="${{ inputs.fail-on }}"
+
+        case "$FAIL_ON" in
+          critical)
+            if [ "${CRITICAL:-0}" -gt 0 ]; then
+              echo "::error::Found ${CRITICAL} critical vulnerabilities. Failing as requested."
+              exit 1
+            fi
+            ;;
+          high)
+            TOTAL=$((${CRITICAL:-0} + ${HIGH:-0}))
+            if [ "$TOTAL" -gt 0 ]; then
+              echo "::error::Found critical/high vulnerabilities (${CRITICAL} critical, ${HIGH} high)."
+              exit 1
+            fi
+            ;;
+          vulnerabilities)
+            if [ "${VULNS:-0}" -gt 0 ]; then
+              echo "::error::Found ${VULNS} vulnerabilities. Failing as requested."
+              exit 1
+            fi
+            ;;
+          none)
+            ;;
+        esac
+
+        echo "✅ Threshold check passed (fail-on: ${FAIL_ON})"
