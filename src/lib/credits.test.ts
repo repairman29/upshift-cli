@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync, unlinkSync, mkdtempSync } from "fs";
 import path from "path";
 import os from "os";
+
+// These tests read AND DELETE the credits file at os.homedir()/.upshift/.
+// Unredirected, `npm test` would destroy the real credit state of whoever
+// runs it. Redirect HOME to a throwaway dir BEFORE anything resolves
+// homedir — credits.js reads os.homedir() lazily on each call, and every
+// test imports it dynamically after this line runs.
+process.env.HOME = mkdtempSync(path.join(os.tmpdir(), "upshift-credits-test-"));
 
 const creditsFile = path.join(os.homedir(), ".upshift", "credits.json");
 
