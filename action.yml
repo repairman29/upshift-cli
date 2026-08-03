@@ -190,7 +190,7 @@ runs:
           const hasToken = Boolean('${{ inputs.upshift-token }}');
           if (!hasToken && (outdated > 0 || vulns > 0)) {
             body += `---\n`;
-            body += `💡 **Get AI explanations and automatic code fixes** — [Upshift Pro](https://upshiftai.dev/pricing) ($12/mo)\n\n`;
+            body += `💡 **Get AI explanations and automatic code fixes** - [Upshift Pro](https://upshiftai.dev/pricing) ($12/mo)\n\n`;
           }
 
           body += `*[Upshift](https://upshiftai.dev) · [Docs](https://upshiftai.dev/docs/github-action)*`;

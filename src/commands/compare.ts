@@ -146,8 +146,8 @@ export function compareCommand(): Command {
         row("License", licA, licB, "none");
 
         // Published date
-        const dateA = dataA?.time ? new Date(dataA.time).toLocaleDateString() : "—";
-        const dateB = dataB?.time ? new Date(dataB.time).toLocaleDateString() : "—";
+        const dateA = dataA?.time ? new Date(dataA.time).toLocaleDateString() : "-";
+        const dateB = dataB?.time ? new Date(dataB.time).toLocaleDateString() : "-";
         row("Published", dateA, dateB, "none");
 
         // Dependencies count
@@ -164,13 +164,13 @@ export function compareCommand(): Command {
         if (bundleA || bundleB) {
           const gzA = bundleA?.gzip ?? null;
           const gzB = bundleB?.gzip ?? null;
-          row("Bundle (gzip)", gzA != null ? fmtBytes(gzA) : "—", gzB != null ? fmtBytes(gzB) : "—", "lower");
+          row("Bundle (gzip)", gzA != null ? fmtBytes(gzA) : "-", gzB != null ? fmtBytes(gzB) : "-", "lower");
           const sizeA = bundleA?.size ?? null;
           const sizeB = bundleB?.size ?? null;
           row(
             "Bundle (minified)",
-            sizeA != null ? fmtBytes(sizeA) : "—",
-            sizeB != null ? fmtBytes(sizeB) : "—",
+            sizeA != null ? fmtBytes(sizeA) : "-",
+            sizeB != null ? fmtBytes(sizeB) : "-",
             "lower"
           );
         }
@@ -179,7 +179,7 @@ export function compareCommand(): Command {
         const upsA = dataA?.dist?.unpackedSize ?? null;
         const upsB = dataB?.dist?.unpackedSize ?? null;
         if (upsA != null || upsB != null) {
-          row("Unpacked size", upsA != null ? fmtBytes(upsA) : "—", upsB != null ? fmtBytes(upsB) : "—", "lower");
+          row("Unpacked size", upsA != null ? fmtBytes(upsA) : "-", upsB != null ? fmtBytes(upsB) : "-", "lower");
         }
 
         console.log("");
@@ -261,10 +261,10 @@ async function fetchConfidence(pkg: string, from: string, to: string) {
 }
 
 function normalizeLicense(lic: unknown): string {
-  if (!lic) return "—";
+  if (!lic) return "-";
   if (typeof lic === "string") return lic;
   if (typeof lic === "object" && lic !== null && "type" in lic) return String((lic as { type: string }).type);
-  return "—";
+  return "-";
 }
 
 function fmtNum(n: number): string {
