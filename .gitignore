@@ -7,3 +7,6 @@ dist/
 .DS_Store
 .upshift/
 coverage/
+
+# fleet coordination state (local, never commit)
+.chump-locks/
