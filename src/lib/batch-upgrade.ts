@@ -27,6 +27,7 @@ export type BatchUpgradeOptions = {
   dryRun?: boolean;
   yes?: boolean;
   skipTests?: boolean;
+  autoMerge?: boolean;
 };
 
 export type UpgradeCandidate = {
@@ -134,7 +135,83 @@ export async function runBatchUpgrade(options: BatchUpgradeOptions): Promise<voi
       }
     }
 
-    // Create backup
+    // Auto-merge mode: upgrade, test, and commit each package individually
+    if (options.autoMerge) {
+      process.stdout.write(chalk.gray("\nAuto-merge mode: each upgrade will be tested and committed separately.\n\n"));
+
+      let succeeded = 0;
+      let failed = 0;
+      const failedPackages: string[] = [];
+
+      for (const pkg of candidates) {
+        // Create backup before each upgrade (in case rollback is needed)
+        createBackup(options.cwd, packageManager);
+
+        const pkgSpinner = ora(`Upgrading ${pkg.name}...`).start();
+
+        try {
+          // Upgrade the package
+          await installPackage(options.cwd, pkg.name, pkg.target, packageManager);
+          pkgSpinner.text = `Testing ${pkg.name}...`;
+
+          // Run tests for this package
+          if (!options.skipTests) {
+            const customTestCommand = parseTestCommand(config.testCommand);
+            const testScript = getTestScript(options.cwd);
+            if (customTestCommand || testScript) {
+              try {
+                await runTests(options.cwd, packageManager);
+              } catch {
+                // Tests failed, rollback this package
+                pkgSpinner.fail(`${pkg.name} ${pkg.current} → ${pkg.target} (tests failed, rolled back)`);
+                await tryRollback(options.cwd, packageManager);
+                failed++;
+                failedPackages.push(pkg.name);
+                continue;
+              }
+            }
+          }
+
+          // Tests passed, commit and push the change
+          try {
+            const commitMessage = `upgrade: ${pkg.name} ${pkg.current} → ${pkg.target}`;
+            await runCommand("git", ["add", "package.json", getLockfileName(packageManager)], options.cwd);
+            await runCommand("git", ["commit", "-m", commitMessage], options.cwd);
+
+            // Push if there's a remote configured
+            try {
+              await runCommand("git", ["remote", "get-url", "origin"], options.cwd);
+              await runCommand("git", ["push"], options.cwd);
+              pkgSpinner.succeed(`${pkg.name} ${pkg.current} → ${pkg.target} (committed and pushed)`);
+            } catch {
+              // No remote or push failed - that's OK for local use
+              pkgSpinner.succeed(`${pkg.name} ${pkg.current} → ${pkg.target} (committed)`);
+            }
+            succeeded++;
+          } catch {
+            // Git commit failed, rollback
+            pkgSpinner.fail(`${pkg.name} ${pkg.current} → ${pkg.target} (commit failed, rolled back)`);
+            await tryRollback(options.cwd, packageManager);
+            failed++;
+            failedPackages.push(pkg.name);
+          }
+        } catch {
+          pkgSpinner.fail(`${pkg.name} failed to upgrade`);
+          failed++;
+          failedPackages.push(pkg.name);
+        }
+      }
+
+      // Summary
+      process.stdout.write(chalk.bold("\nUpgrade Summary:\n"));
+      process.stdout.write(chalk.green(`  ✔ ${succeeded} packages upgraded and committed\n`));
+      if (failed > 0) {
+        process.stdout.write(chalk.red(`  ✖ ${failed} packages failed or rolled back: ${failedPackages.join(", ")}\n`));
+      }
+      return;
+    }
+
+    // Standard batch mode: upgrade all, then test once
     const backupDir = createBackup(options.cwd, packageManager);
     process.stdout.write(chalk.gray(`\nBackup created: ${backupDir}\n\n`));
 
