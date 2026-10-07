@@ -172,12 +172,21 @@ export async function runBatchUpgrade(options: BatchUpgradeOptions): Promise<voi
             }
           }
 
-          // Tests passed, commit the change
+          // Tests passed, commit and push the change
           try {
             const commitMessage = `upgrade: ${pkg.name} ${pkg.current} → ${pkg.target}`;
             await runCommand("git", ["add", "package.json", getLockfileName(packageManager)], options.cwd);
             await runCommand("git", ["commit", "-m", commitMessage], options.cwd);
-            pkgSpinner.succeed(`${pkg.name} ${pkg.current} → ${pkg.target} (committed)`);
+
+            // Push if there's a remote configured
+            try {
+              await runCommand("git", ["remote", "get-url", "origin"], options.cwd);
+              await runCommand("git", ["push"], options.cwd);
+              pkgSpinner.succeed(`${pkg.name} ${pkg.current} → ${pkg.target} (committed and pushed)`);
+            } catch {
+              // No remote or push failed - that's OK for local use
+              pkgSpinner.succeed(`${pkg.name} ${pkg.current} → ${pkg.target} (committed)`);
+            }
             succeeded++;
           } catch {
             // Git commit failed, rollback
