@@ -16,6 +16,7 @@ export function upgradeCommand(): Command {
     .option("--dry-run", "Show planned changes without modifying files", false)
     .option("-y, --yes", "Skip confirmation prompts")
     .option("--skip-tests", "Skip running tests after upgrade")
+    .option("--auto-merge", "Automatically commit and push each successful upgrade (requires git)")
     .action(async (pkg, options) => {
       validateOrExit(fsPathSchema, options.cwd);
 
@@ -29,6 +30,7 @@ export function upgradeCommand(): Command {
             dryRun: options.dryRun,
             yes: options.yes,
             skipTests: options.skipTests,
+            autoMerge: options.autoMerge,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
