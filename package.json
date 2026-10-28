@@ -30,7 +30,7 @@
     "build": "tsup src/cli.ts --format esm --dts --clean",
     "dev": "node --loader ts-node/esm src/cli.ts",
     "start": "node dist/cli.js",
-    "test": "npm run test:unit",
+    "test": "npm run build && npm run test:unit",
     "test:unit": "vitest run",
     "test:corpus": "npm run build && node scripts/corpus-smoke.mjs",
     "lint": "eslint src/",
