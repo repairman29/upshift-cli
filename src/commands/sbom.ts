@@ -85,8 +85,9 @@ function buildCycloneDxSbom(pkg: any, deps: Record<string, string>, cwd: string)
 
     // Try to read actual installed version from node_modules
     let installedVersion = version;
+    let installedPkg: any = null;
     try {
-      const installedPkg = JSON.parse(fs.readFileSync(path.join(cwd, "node_modules", name, "package.json"), "utf8"));
+      installedPkg = JSON.parse(fs.readFileSync(path.join(cwd, "node_modules", name, "package.json"), "utf8"));
       installedVersion = installedPkg.version ?? version;
     } catch {
       // Not installed — use declared version
@@ -94,18 +95,57 @@ function buildCycloneDxSbom(pkg: any, deps: Record<string, string>, cwd: string)
 
     const purl = `pkg:npm/${name.startsWith("@") ? name.slice(1) : name}@${installedVersion}`;
 
+    // Build external references array
+    const externalReferences: Array<{ type: string; url: string }> = [
+      {
+        type: "website",
+        url: `https://www.npmjs.com/package/${name}`,
+      },
+    ];
+
+    // Add VCS reference if repository field is present
+    if (installedPkg?.repository) {
+      let repoUrl: string | undefined;
+      if (typeof installedPkg.repository === "string") {
+        repoUrl = installedPkg.repository;
+      } else if (installedPkg.repository.url) {
+        repoUrl = installedPkg.repository.url;
+      }
+
+      if (repoUrl) {
+        // Normalize git+ prefix and .git suffix
+        repoUrl = repoUrl.replace(/^git\+/, "").replace(/\.git$/, ".git");
+        externalReferences.push({
+          type: "vcs",
+          url: repoUrl,
+        });
+      }
+    }
+
+    // Add issue-tracker reference if bugs field is present
+    if (installedPkg?.bugs) {
+      let bugsUrl: string | undefined;
+      if (typeof installedPkg.bugs === "string") {
+        bugsUrl = installedPkg.bugs;
+      } else if (installedPkg.bugs.url) {
+        bugsUrl = installedPkg.bugs.url;
+      }
+
+      if (bugsUrl) {
+        externalReferences.push({
+          type: "issue-tracker",
+          url: bugsUrl,
+        });
+      }
+    }
+
     return {
       type: "library",
       "bom-ref": purl,
       name,
       version: installedVersion,
       purl,
-      externalReferences: [
-        {
-          type: "website",
-          url: `https://www.npmjs.com/package/${name}`,
-        },
-      ],
+      externalReferences,
     };
   });
 
