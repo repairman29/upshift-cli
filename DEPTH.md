@@ -29,6 +29,7 @@ of THIS repo has been unit-tested and smoke-built, not e2e'd.
 | `src/lib/version-bump-kind.test.ts` (4) | D2 | semver bump classification | pre-release/build-metadata edge tags untested |
 | `src/lib/audit-log.test.ts` (5) | D2 | audit entries written/read | log rotation/corruption recovery untested |
 | `tests/corpus` + `scripts/corpus-smoke.mjs` | scenario, manual | scan behavior across a corpus of real-world repos | no schedule - runs only when someone remembers; no committed pass/fail ledger |
+| `src/lib/migrate.test.ts` (7) | D2–D3 | shipped templates schema & step validity, stem/name lookup and rejection, custom file loading & error cases, applyTemplate dry-run & directory skips | `--submit` network path untested; real codemods on real projects untested; `--template-file` resolution beyond one case untested |
 
 ## Honest state
 
