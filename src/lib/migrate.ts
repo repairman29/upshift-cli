@@ -17,6 +17,7 @@ export type MigrationStep = {
 };
 
 export type MigrationTemplate = {
+  id?: string;
   name: string;
   description: string;
   from: string;
@@ -49,8 +50,9 @@ export function loadTemplateFromFile(filePath: string, cwd?: string): MigrationT
   try {
     const raw = readFileSync(resolved, "utf8");
     const t = JSON.parse(raw) as MigrationTemplate;
-    if (!t.package || !t.steps || !Array.isArray(t.steps)) return null;
-    return { ...t, name: t.name || path.basename(resolved, ".json") };
+    if (!t || typeof t !== "object" || !t.package || !t.steps || !Array.isArray(t.steps)) return null;
+    const stem = path.basename(resolved, ".json");
+    return { ...t, id: t.id || stem, name: t.name || stem };
   } catch {
     return null;
   }
@@ -70,9 +72,10 @@ export function listTemplates(packageName?: string): MigrationTemplate[] {
     try {
       const raw = readFileSync(filePath, "utf8");
       const t = JSON.parse(raw) as MigrationTemplate;
-      if (!t.package || !t.steps) continue;
+      if (!t || typeof t !== "object" || !t.package || !t.steps || !Array.isArray(t.steps)) continue;
       if (packageName && t.package !== packageName) continue;
-      templates.push(t);
+      const stem = path.basename(e.name, ".json");
+      templates.push({ ...t, id: stem });
     } catch {
       // skip invalid
     }
@@ -81,21 +84,31 @@ export function listTemplates(packageName?: string): MigrationTemplate[] {
   return templates;
 }
 
-/** Find a template for a package and optional version range (e.g. "18.x" -> "19.x"). */
-export function findTemplate(packageName: string, fromVersion?: string, toVersion?: string): MigrationTemplate | null {
+/** Find a template for a package by template id/name or optional version range (e.g. "18.x" -> "19.x"). */
+export function findTemplate(
+  packageName: string,
+  templateIdOrFrom?: string,
+  toVersion?: string
+): MigrationTemplate | null {
   const all = listTemplates(packageName);
   if (all.length === 0) return null;
-  if (fromVersion && toVersion) {
+
+  if (templateIdOrFrom && toVersion) {
     const match = all.find(
       (t) =>
         t.from &&
         t.to &&
-        (fromVersion.startsWith(t.from.replace(".x", "")) || t.from === "*") &&
+        (templateIdOrFrom.startsWith(t.from.replace(".x", "")) || t.from === "*") &&
         (toVersion.startsWith(t.to.replace(".x", "")) || t.to === "*")
     );
-    return match ?? all[0];
+    return match ?? all[0] ?? null;
   }
-  return all[0];
+
+  if (templateIdOrFrom) {
+    return all.find((t) => t.id === templateIdOrFrom || t.name === templateIdOrFrom) ?? null;
+  }
+
+  return all[0] ?? null;
 }
 
 /** Apply a single find/replace step to file contents — replaces ALL occurrences. */

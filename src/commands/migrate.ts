@@ -60,7 +60,17 @@ export function migrateCommand(): Command {
         }
       } else if (options.template) {
         const all = listTemplates(pkg);
-        template = all.find((t) => t.name === options.template) ?? all[0] ?? null;
+        template = all.find((t) => t.name === options.template || t.id === options.template) ?? null;
+        if (!template) {
+          const availableIds = all.map((t) => t.id ?? t.name);
+          process.stdout.write(chalk.yellow(`No migration template "${options.template}" found for "${pkg}".\n`));
+          if (availableIds.length > 0) {
+            process.stdout.write(chalk.gray(`Available templates for ${pkg}: ${availableIds.join(", ")}\n`));
+          } else {
+            process.stdout.write(chalk.gray(`No templates available for "${pkg}".\n`));
+          }
+          process.exit(1);
+        }
       } else {
         template = findTemplate(pkg);
       }
