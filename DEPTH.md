@@ -23,7 +23,7 @@ of THIS repo has been unit-tested and smoke-built, not e2e'd.
 | Suite | Depth | What it actually proves | Gaps |
 |---|---|---|---|
 | `src/lib/validate.test.ts` (16) | D3–D4-lite | input schemas reject empties, oversize names, shell metacharacters, null-byte paths, non-UUID org ids; `validateOrExit` exits 1 on failure | rejection lists are enumerated, not fuzzed; no unicode-normalization cases; schemas tested in isolation, not at the CLI boundary |
-| `src/lib/config.test.ts` (16) | D2–D3 | testCommand string/array forms run, package-manager fallback selected, failures propagate | config file parsing/merge precedence untested; malformed config behavior unknown |
+| `src/lib/config.test.ts` (23) | D2–D3 | testCommand string/array forms, cwd cache isolation, file precedence, malformed file warning & fallthrough, nested merges (approval, upgradePolicy, registry), defaultMode passthrough | value validation (no schema checks on fields); env-var expansion of registry.token; concurrency / cache invalidation across process boundaries |
 | `src/lib/credits.test.ts` (9) | D2–D3 | balance init/add/reset/consume; insufficient balance exits 2; org-remote consume path + per-user fallback (fetch mocked) | **fixed 2026-08-02: the suite previously deleted the REAL `~/.upshift/credits.json` of whoever ran `npm test`** - now redirected to a temp HOME; concurrent consumes (file race) untested; remote path is mock-only |
 | `src/lib/package-manager.test.ts` (5) | D2 | package-manager detection basics | lockfile-conflict and workspace-monorepo detection untested |
 | `src/lib/version-bump-kind.test.ts` (4) | D2 | semver bump classification | pre-release/build-metadata edge tags untested |
