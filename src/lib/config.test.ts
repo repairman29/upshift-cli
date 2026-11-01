@@ -1,14 +1,21 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { loadConfig, clearConfigCache, shouldIgnorePackage, createConfigTemplate, parseTestCommand } from "./config.js";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import {
+  loadConfig,
+  clearConfigCache,
+  shouldIgnorePackage,
+  createConfigTemplate,
+  parseTestCommand,
+  type UpshiftConfig,
+} from "./config.js";
 import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
 import path from "path";
 import os from "os";
 
 const TMP = path.join(os.tmpdir(), `upshift-config-test-${Date.now()}`);
 
-function writeConfig(obj: object) {
-  mkdirSync(TMP, { recursive: true });
-  writeFileSync(path.join(TMP, ".upshiftrc.json"), JSON.stringify(obj));
+function writeConfig(obj: object, dir: string = TMP, filename: string = ".upshiftrc.json") {
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, filename), JSON.stringify(obj));
 }
 
 describe("loadConfig", () => {
@@ -80,6 +87,110 @@ describe("loadConfig", () => {
     writeConfig({ defaultMode: "all" });
     const config = loadConfig(TMP);
     expect(config.defaultMode).toBe("all");
+  });
+
+  it("caches config per cwd and returns different configs for different directories", () => {
+    const dirA = path.join(TMP, "dir-a");
+    const dirB = path.join(TMP, "dir-b");
+    writeConfig({ defaultMode: "patch" }, dirA);
+    writeConfig({ defaultMode: "all" }, dirB);
+
+    const configA = loadConfig(dirA);
+    const configB = loadConfig(dirB);
+
+    expect(configA.defaultMode).toBe("patch");
+    expect(configB.defaultMode).toBe("all");
+    expect(configA).not.toBe(configB);
+
+    // Verify clearConfigCache clears both
+    clearConfigCache();
+    writeConfig({ defaultMode: "minor" }, dirA);
+    writeConfig({ defaultMode: "minor" }, dirB);
+    expect(loadConfig(dirA).defaultMode).toBe("minor");
+    expect(loadConfig(dirB).defaultMode).toBe("minor");
+  });
+
+  it("observes file precedence: .upshiftrc.json > .upshiftrc > upshift.config.json", () => {
+    // Write all three files with different values
+    writeConfig({ defaultMode: "all" }, TMP, ".upshiftrc.json");
+    writeConfig({ defaultMode: "minor" }, TMP, ".upshiftrc");
+    writeConfig({ defaultMode: "patch" }, TMP, "upshift.config.json");
+
+    expect(loadConfig(TMP).defaultMode).toBe("all");
+
+    // Remove .upshiftrc.json; .upshiftrc should take precedence over upshift.config.json
+    clearConfigCache();
+    rmSync(path.join(TMP, ".upshiftrc.json"));
+    expect(loadConfig(TMP).defaultMode).toBe("minor");
+
+    // Remove .upshiftrc; upshift.config.json should be used
+    clearConfigCache();
+    rmSync(path.join(TMP, ".upshiftrc"));
+    expect(loadConfig(TMP).defaultMode).toBe("patch");
+  });
+
+  it("falls through to next config file when higher precedence file is malformed and warns once", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mkdirSync(TMP, { recursive: true });
+    // Malformed .upshiftrc.json
+    writeFileSync(path.join(TMP, ".upshiftrc.json"), "{ invalid json ");
+    // Valid fallback upshift.config.json
+    writeConfig({ defaultMode: "all" }, TMP, "upshift.config.json");
+
+    const config = loadConfig(TMP);
+    expect(config.defaultMode).toBe("all");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to parse .upshiftrc.json"));
+    warnSpy.mockRestore();
+  });
+
+  it("returns default config and warns when only malformed config file exists", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mkdirSync(TMP, { recursive: true });
+    writeFileSync(path.join(TMP, ".upshiftrc.json"), "{ not json ");
+
+    const config = loadConfig(TMP);
+    expect(config.defaultMode).toBe("minor");
+    expect(config.autoTest).toBe(true);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to parse .upshiftrc.json"));
+    warnSpy.mockRestore();
+  });
+
+  it("merges approval nested object preserving defaults", () => {
+    writeConfig({
+      approval: {
+        webhookUrl: "https://example.com/webhook",
+      },
+    });
+    const config = loadConfig(TMP);
+    expect(config.approval?.mode).toBe("prompt");
+    expect(config.approval?.requireFor).toEqual(["major"]);
+    expect(config.approval?.webhookUrl).toBe("https://example.com/webhook");
+  });
+
+  it("merges upgradePolicy.blockRisk and registry nested objects", () => {
+    writeConfig({
+      upgradePolicy: {
+        blockRisk: ["high"],
+      },
+      registry: {
+        url: "https://custom.registry.org",
+        token: "$CUSTOM_TOKEN",
+      },
+    });
+    const config = loadConfig(TMP);
+    expect(config.upgradePolicy?.blockRisk).toEqual(["high"]);
+    expect(config.registry?.url).toBe("https://custom.registry.org");
+    expect(config.registry?.token).toBe("$CUSTOM_TOKEN");
+  });
+
+  it("passes through unknown defaultMode string unchanged", () => {
+    writeConfig({
+      defaultMode: "custom-mode" as unknown as UpshiftConfig["defaultMode"],
+    });
+    const config = loadConfig(TMP);
+    expect(config.defaultMode).toBe("custom-mode");
   });
 });
 

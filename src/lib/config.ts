@@ -78,31 +78,34 @@ const DEFAULT_CONFIG: UpshiftConfig = {
   upgradePolicy: undefined,
 };
 
-let cachedConfig: UpshiftConfig | null = null;
+const configCache = new Map<string, UpshiftConfig>();
 
 export function loadConfig(cwd: string = process.cwd()): UpshiftConfig {
-  if (cachedConfig) return cachedConfig;
+  const resolvedCwd = path.resolve(cwd);
+  const cached = configCache.get(resolvedCwd);
+  if (cached) return cached;
 
   for (const filename of CONFIG_FILES) {
-    const configPath = path.join(cwd, filename);
+    const configPath = path.join(resolvedCwd, filename);
     if (existsSync(configPath)) {
       try {
         const raw = readFileSync(configPath, "utf8");
         const userConfig = JSON.parse(raw) as Partial<UpshiftConfig>;
-        cachedConfig = mergeConfig(DEFAULT_CONFIG, userConfig);
-        return cachedConfig;
+        const merged = mergeConfig(DEFAULT_CONFIG, userConfig);
+        configCache.set(resolvedCwd, merged);
+        return merged;
       } catch (error) {
         console.warn(`Warning: Failed to parse ${filename}: ${error}`);
       }
     }
   }
 
-  cachedConfig = DEFAULT_CONFIG;
-  return cachedConfig;
+  configCache.set(resolvedCwd, DEFAULT_CONFIG);
+  return DEFAULT_CONFIG;
 }
 
 export function clearConfigCache(): void {
-  cachedConfig = null;
+  configCache.clear();
 }
 
 function mergeConfig(defaults: UpshiftConfig, user: Partial<UpshiftConfig>): UpshiftConfig {
