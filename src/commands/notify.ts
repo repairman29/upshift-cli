@@ -83,7 +83,7 @@ async function runNotify(options: {
     const spinner = ora("Sending test notification...").start();
 
     try {
-      await sendNotification(
+      const results = await sendNotification(
         {
           title: "🧪 Upshift Test Notification",
           message: "This is a test notification from Upshift CLI.",
@@ -97,7 +97,26 @@ async function runNotify(options: {
         config
       );
 
-      spinner.succeed("Test notification sent!");
+      const hasFailure = results.some((r) => !r.ok);
+      if (hasFailure) {
+        spinner.fail("Failed to send test notification");
+      } else {
+        spinner.succeed("Test notification sent!");
+      }
+
+      for (const res of results) {
+        if (res.ok) {
+          console.log(chalk.green(`  ✔ ${res.channel}: delivered`));
+        } else {
+          const detail = res.status ? `status ${res.status}` : res.error ? res.error : "unknown error";
+          console.log(chalk.red(`  ✖ ${res.channel}: failed (${detail})`));
+        }
+      }
+
+      if (hasFailure) {
+        process.exit(1);
+      }
+
       console.log(chalk.gray("\nCheck your configured channels for the message."));
     } catch (error) {
       spinner.fail("Failed to send notification");
@@ -126,9 +145,28 @@ async function runNotify(options: {
 
     const payload = createScanNotification(outdatedCount, vulnerabilityCount, criticalCount, topPackages);
 
-    await sendNotification(payload, config);
+    const results = await sendNotification(payload, config);
 
-    spinner.succeed("Notification sent!");
+    const hasFailure = results.some((r) => !r.ok);
+    if (hasFailure) {
+      spinner.fail("Failed to send notification");
+    } else {
+      spinner.succeed("Notification sent!");
+    }
+
+    for (const res of results) {
+      if (res.ok) {
+        console.log(chalk.green(`  ✔ ${res.channel}: delivered`));
+      } else {
+        const detail = res.status ? `status ${res.status}` : res.error ? res.error : "unknown error";
+        console.log(chalk.red(`  ✖ ${res.channel}: failed (${detail})`));
+      }
+    }
+
+    if (hasFailure) {
+      process.exit(1);
+    }
+
     const vulnLine =
       vulnerabilityCount > 0 ? `, ${vulnerabilityCount} vulnerabilities (${criticalCount} critical)` : "";
     console.log(chalk.gray(`\nReported ${outdatedCount} outdated package(s)${vulnLine}.`));
