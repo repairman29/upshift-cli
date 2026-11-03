@@ -1,5 +1,12 @@
 export type NotificationChannel = "slack" | "discord" | "webhook";
 
+export type NotificationResult = {
+  channel: NotificationChannel;
+  ok: boolean;
+  status?: number;
+  error?: string;
+};
+
 export type NotificationPayload = {
   title: string;
   message: string;
@@ -27,10 +34,13 @@ export type NotificationConfig = {
   };
 };
 
-export async function sendNotification(payload: NotificationPayload, config?: NotificationConfig): Promise<void> {
+export async function sendNotification(
+  payload: NotificationPayload,
+  config?: NotificationConfig
+): Promise<NotificationResult[]> {
   const notifyConfig = config ?? getNotificationConfig();
 
-  const promises: Promise<void>[] = [];
+  const promises: Promise<NotificationResult>[] = [];
 
   if (notifyConfig.slack?.webhookUrl) {
     promises.push(sendSlackNotification(payload, notifyConfig.slack.webhookUrl, notifyConfig.slack.channel));
@@ -44,7 +54,7 @@ export async function sendNotification(payload: NotificationPayload, config?: No
     promises.push(sendGenericWebhook(payload, notifyConfig.webhook.url, notifyConfig.webhook.headers));
   }
 
-  await Promise.allSettled(promises);
+  return Promise.all(promises);
 }
 
 function getNotificationConfig(): NotificationConfig {
@@ -76,7 +86,7 @@ async function sendSlackNotification(
   payload: NotificationPayload,
   webhookUrl: string,
   channel?: string
-): Promise<void> {
+): Promise<NotificationResult> {
   const color = {
     info: "#2196F3",
     warning: "#FF9800",
@@ -125,14 +135,28 @@ async function sendSlackNotification(
     ],
   };
 
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(slackPayload),
-  });
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(slackPayload),
+    });
+
+    return {
+      channel: "slack",
+      ok: res.ok,
+      status: res.status,
+    };
+  } catch (error) {
+    return {
+      channel: "slack",
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
-async function sendDiscordNotification(payload: NotificationPayload, webhookUrl: string): Promise<void> {
+async function sendDiscordNotification(payload: NotificationPayload, webhookUrl: string): Promise<NotificationResult> {
   const color = {
     info: 0x2196f3,
     warning: 0xff9800,
@@ -196,30 +220,58 @@ async function sendDiscordNotification(payload: NotificationPayload, webhookUrl:
     ],
   };
 
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(discordPayload),
-  });
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(discordPayload),
+    });
+
+    return {
+      channel: "discord",
+      ok: res.ok,
+      status: res.status,
+    };
+  } catch (error) {
+    return {
+      channel: "discord",
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 async function sendGenericWebhook(
   payload: NotificationPayload,
   url: string,
   headers?: Record<string, string>
-): Promise<void> {
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: JSON.stringify({
-      ...payload,
-      timestamp: new Date().toISOString(),
-      source: "upshift",
-    }),
-  });
+): Promise<NotificationResult> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify({
+        ...payload,
+        timestamp: new Date().toISOString(),
+        source: "upshift",
+      }),
+    });
+
+    return {
+      channel: "webhook",
+      ok: res.ok,
+      status: res.status,
+    };
+  } catch (error) {
+    return {
+      channel: "webhook",
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export function createScanNotification(

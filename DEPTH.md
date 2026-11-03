@@ -28,6 +28,7 @@ of THIS repo has been unit-tested and smoke-built, not e2e'd.
 | `src/lib/package-manager.test.ts` (24) | D2–D3 | detection precedence (pnpm>yarn>npm>bare package.json), outdated parsers (npm/yarn/pnpm) and exit code allowlists, audit fix rejection, command/lockfile helpers | workspace-monorepo detection in monorepo.ts untested; parsers tested on hand-written fixtures |
 | `src/lib/version-bump-kind.test.ts` (4) | D2 | semver bump classification | pre-release/build-metadata edge tags untested |
 | `src/lib/audit-log.test.ts` (5) | D2 | audit entries written/read | log rotation/corruption recovery untested |
+| `src/lib/notifications.test.ts` (12) | D2–D3 | payload formatting (Slack, Discord, generic webhook), non-2xx status and thrown fetch failure capture, multi-channel resilience, pure scan and upgrade notification helpers | real Slack/Discord endpoints, retries, the scan path in runNotify (:110-138) |
 | `tests/corpus` + `scripts/corpus-smoke.mjs` | scenario, manual | scan behavior across a corpus of real-world repos | no schedule - runs only when someone remembers; no committed pass/fail ledger |
 | `src/lib/migrate.test.ts` (7) | D2–D3 | shipped templates schema & step validity, stem/name lookup and rejection, custom file loading & error cases, applyTemplate dry-run & directory skips | `--submit` network path untested; real codemods on real projects untested; `--template-file` resolution beyond one case untested |
 
