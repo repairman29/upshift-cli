@@ -3,7 +3,7 @@ import ora from "ora";
 import { existsSync, readdirSync, copyFileSync, rmSync } from "fs";
 import path from "path";
 import { select, confirm } from "@inquirer/prompts";
-import { runCommand } from "./exec.js";
+import { detectPackageManager, reinstallDependencies } from "./package-manager.js";
 
 export type RollbackOptions = {
   cwd: string;
@@ -184,7 +184,7 @@ async function restoreBackup(cwd: string, backup: BackupInfo): Promise<void> {
     spinner.text = "Reinstalling dependencies...";
 
     // Reinstall
-    await runCommand("npm", ["install"], cwd);
+    await reinstallDependencies(cwd, detectPackageManager(cwd));
 
     spinner.succeed("Rollback complete");
 
